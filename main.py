@@ -21,7 +21,7 @@ YELLOW = np.array([np.array([20, 80, 80]), np.array([30, 255, 255])])
 ORANGE = np.array([np.array([0, 50, 50]), np.array([10, 255, 255])])
 
 
-def colorDetection(image, color, currentImage, name="Color Detection"):
+def colorDetection(image, color, name="Color Detection"):
     kernel = np.ones((7, 7), np.uint8)
 
     into_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -37,15 +37,11 @@ def colorDetection(image, color, currentImage, name="Color Detection"):
     # Find contours from the mask
     contours, hierarchy = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    filename = 'data/frame' + str(currentImage) + '.jpg'
-    cv2.imwrite(filename, image)
-    logging.info("Image %s Saved", currentImage)
-
-    return filename, contours
+    return contours
 
 
-def startImageProcessingThread(c, filename):
-    x = threading.Thread(target=imageProcessingThread.analyse_image, args=(c, filename))
+def startImageProcessingThread(c, filename, currentImage):
+    x = threading.Thread(target=imageProcessingThread.analyse_image, args=(c, filename, currentImage))
     x.start()
 
 
@@ -56,7 +52,7 @@ def main():
     fmt = "%(asctime)s: %(message)s"
     logging.basicConfig(format=fmt, level=logging.INFO, datefmt="%H:%M:%S")
 
-    currentImage = 0
+    currentImage = 1
 
     width = 640
     height = 480
@@ -72,13 +68,21 @@ def main():
 
     while True:
         ret, frame = cap.read()
-        roi = frame[300:700, 700:frame.shape[1]]
 
-        if time.time() - lastTime >= 1 and startingSicles is False:
+        if startingSicles:
+            roi = frame
+        else:
+            roi = frame[300:700, 700:frame.shape[1]]
+
+        if time.time() - lastTime >= 1:
             lastTime = time.time()
-            filename, cnt = colorDetection(roi, ORANGE, currentImage, 'Beak Detection')
-            currentImage+=1
-            startImageProcessingThread(cnt, filename)
+            cnt = colorDetection(roi, ORANGE, 'Beak Detection')
+            if startingSicles is False:
+                filename = 'data/image/frame' + str(currentImage) + '.jpg'
+                cv2.imwrite(filename, roi)
+                logging.info("Image %s Saved", currentImage)
+                startImageProcessingThread(cnt, filename, currentImage)
+                currentImage += 1
 
         cv2.drawContours(roi, cnt, -1, (0, 0, 255), 3)
         roi = cv2.resize(roi, (int(roi.shape[1] / 2), int(roi.shape[0] / 2)), interpolation=cv2.INTER_AREA)
