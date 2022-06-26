@@ -60,7 +60,7 @@ def main():
 
         if time.time() - lastTime >= 1/ProcessedFPS:
             lastTime = time.time()
-            cnt = colorDetection(roi, ORANGE, 'Beak Detection')
+            cnt = colorDetection(roi, ORANGE)
 
             if Started and len(cnt) > 0:
                 for c in cnt:
